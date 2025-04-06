@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($resultado->num_rows > 0) {
         $_SESSION['rpe'] = $rpe;
-        header("Location: /cfe-web/dashboard.php");
+        header("Location: dashboard.php");
         exit;
     } else {
         $_SESSION['error'] = "Credenciales incorrectas";
@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Mostrar vista
-require __DIR__ . '/views/layouts/header.php';
+require __DIR__ . '/views/layouts/header-login.php';
 require __DIR__ . '/views/auth/login.php';
 require __DIR__ . '/views/layouts/footer.php';
 ?>

@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     } else {
         $_SESSION['error'] = "Credenciales incorrectas";
-        header("Location: /cfe-web/login.php");
+        header("Location: {$basePath}/login.php"); // Asegúrate de que esta ruta es correcta
         exit;
     }
 }
