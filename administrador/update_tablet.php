@@ -14,12 +14,13 @@ if (!isset($_SESSION['rpe']) || $_SESSION['tipo_usuario'] !== 'administrador') {
 
 require_once $_SERVER['DOCUMENT_ROOT'] . '/app/config/database.php';
 
+// Configurar la respuesta como JSON
+header('Content-Type: application/json');
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         // Recoger datos del formulario
         $activo = $_POST['activo'] ?? '';
-        $marca = $_POST['marca'] ?? '';
-        $modelo = $_POST['modelo'] ?? '';
         $inventario = $_POST['inventario'] ?? null;
         $numero_serie = $_POST['numero_serie'] ?? '';
         $version_android = $_POST['version_android'] ?? null;
@@ -27,20 +28,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $agencia = $_POST['agencia'] ?? null;
         $proceso = $_POST['proceso'] ?? null;
         $rpe_trabajador = $_POST['rpe_trabajador'] ?? '';
-        $ubicacion_registro = $_POST['ubicacion_registro'] ?? null;
-        $fecha_registro = $_POST['fecha_registro'] ?? null;
-        $marca_chip = $_POST['marca_chip'] ?? null;
         $numero_serie_chip = $_POST['numero_serie_chip'] ?? null;
 
+        // Log para depurar datos recibidos
+        error_log('Datos recibidos: ' . json_encode($_POST));
+
         // Validar campos requeridos
-        if (empty($activo) || empty($marca) || empty($modelo) || empty($numero_serie) || empty($rpe_trabajador)) {
-            throw new Exception("Los campos requeridos no pueden estar vacíos.");
+        if (empty($activo) || empty($numero_serie) || empty($rpe_trabajador)) {
+            throw new Exception("Los campos requeridos (activo, número de serie, RPE trabajador) no pueden estar vacíos.");
         }
 
-        // Preparar la consulta de actualización
+        // Preparar la consulta de actualización, excluyendo campos no editables
         $query = "UPDATE tabletas SET 
-            marca = ?, 
-            modelo = ?, 
             inventario = ?, 
             numero_serie = ?, 
             version_android = ?, 
@@ -48,9 +47,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             agencia = ?, 
             proceso = ?, 
             rpe_trabajador = ?, 
-            ubicacion_registro = ?, 
-            fecha_registro = ?, 
-            marca_chip = ?, 
             numero_serie_chip = ?
             WHERE activo = ?";
 
@@ -59,11 +55,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception("Error preparando la consulta: " . $conexion->error);
         }
 
-        // Vincular parámetros (null para campos opcionales)
+        // Vincular parámetros con tipos correctos
         $stmt->bind_param(
-            "sssssisssssss",
-            $marca,
-            $modelo,
+            "sssisssss",
             $inventario,
             $numero_serie,
             $version_android,
@@ -71,31 +65,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $agencia,
             $proceso,
             $rpe_trabajador,
-            $ubicacion_registro,
-            $fecha_registro,
-            $marca_chip,
             $numero_serie_chip,
             $activo
         );
 
+        // Ejecutar la consulta
         if (!$stmt->execute()) {
             throw new Exception("Error ejecutando la actualización: " . $stmt->error);
         }
 
+        // Log para depurar resultado
+        $affected_rows = $stmt->affected_rows;
+        error_log("Filas afectadas: $affected_rows");
+
         $stmt->close();
+
+        if ($affected_rows === 0) {
+            throw new Exception("No se actualizó ninguna fila. Verifique que el activo '$activo' exista.");
+        }
         
-        // Redirigir con mensaje de éxito
-        header("Location: " . BASE_URL . "administrador/gestionar_tabletas.php?success=Tableta actualizada correctamente");
+        // Responder con éxito
+        echo json_encode([
+            'success' => true,
+            'message' => 'Tableta actualizada correctamente'
+        ]);
         exit();
 
     } catch (Exception $e) {
-        // Redirigir con mensaje de error
-        header("Location: " . BASE_URL . "administrador/gestionar_tabletas.php?error=" . urlencode($e->getMessage()));
+        // Log del error
+        error_log('Error en update_tablet.php: ' . $e->getMessage());
+        
+        // Responder con error
+        echo json_encode([
+            'success' => false,
+            'message' => $e->getMessage()
+        ]);
         exit();
     }
 } else {
-    // Si no es POST, redirigir
-    header("Location: " . BASE_URL . "administrador/gestionar_tabletas.php");
+    // Si no es POST, devolver error
+    echo json_encode([
+        'success' => false,
+        'message' => 'Método no permitido'
+    ]);
     exit();
 }
 ?>
