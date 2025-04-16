@@ -99,7 +99,7 @@
                         </ul>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="<?= BASE_URL ?>gestion.php">
+                        <a class="nav-link" href="<?= BASE_URL ?>administrador/gestionar.php">
                             <i class="bi bi-gear-fill me-1"></i> Gestión
                         </a>
                     </li>

@@ -11,8 +11,13 @@ if (!isset($_GET['activo']) || empty($_GET['activo'])) {
 $activo = $_GET['activo'];
 
 try {
-    // Obtener datos de la tableta
-    $stmt = $conexion->prepare("SELECT * FROM tabletas WHERE activo = ?");
+    // Obtener datos de la tableta y el nombre del trabajador
+    $stmt = $conexion->prepare("
+        SELECT t.*, tr.nombre AS nombre_trabajador 
+        FROM tabletas t 
+        LEFT JOIN trabajadores tr ON t.rpe_trabajador = tr.rpe 
+        WHERE t.activo = ?
+    ");
     $stmt->bind_param("s", $activo);
     $stmt->execute();
     $result = $stmt->get_result();

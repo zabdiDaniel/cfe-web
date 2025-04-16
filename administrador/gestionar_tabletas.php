@@ -245,8 +245,7 @@ $columns = [
 
 <div class="container mt-5">
     <!-- Contenedor para el Toast -->
-    <div class="position-fixed top-0 start-50 translate-middle-x p-3" style="z-index: 1055; width: 100%; max-width: 400px;">
-        <div id="notificationToast" class="toast shadow-lg border-0" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="true" data-bs-delay="4000">
+    <div class="position-fixed start-50 translate-middle-x p-3" style="z-index: 1055; top: 70px; width: 100%; max-width: 400px;">        <div id="notificationToast" class="toast shadow-lg border-0" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="true" data-bs-delay="4000">
             <div class="toast-body d-flex align-items-center gap-3 p-3">
                 <i id="toastIcon" class="bi" style="font-size: 1.5rem;"></i>
                 <div>

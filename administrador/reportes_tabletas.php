@@ -107,7 +107,7 @@ $columns = [
 
 <div class="container mt-5">
     <!-- Contenedor para el Toast -->
-    <div class="position-fixed top-0 start-50 translate-middle-x p-3" style="z-index: 1055; width: 100%; max-width: 400px;">
+    <div class="position-fixed start-50 translate-middle-x p-3" style="z-index: 1055; top: 70px; width: 100%; max-width: 400px;">
         <div id="notificationToast" class="toast shadow-lg border-0" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="true" data-bs-delay="4000">
             <div class="toast-body d-flex align-items-center gap-3 p-3">
                 <i id="toastIcon" class="bi" style="font-size: 1.5rem;"></i>
@@ -275,6 +275,7 @@ $columns = [
 
     // Generar PDF (común para descargar y visualizar)
     function generatePDF(activo, isPreview) {
+        // 1. Obtener Datos
         fetch('<?= BASE_URL ?>administrador/get_tablet_data.php?activo=' + encodeURIComponent(activo), {
                 method: 'GET',
                 headers: {
@@ -292,6 +293,7 @@ $columns = [
                     throw new Error(data.message || 'Error desconocido');
                 }
 
+                // 2. Inicialización de jsPDF
                 const {
                     jsPDF
                 } = window.jspdf;
@@ -301,149 +303,189 @@ $columns = [
                     orientation: 'portrait'
                 });
 
-                // Configuración inicial
+                // 3. Establecer fondo blanco explícitamente
+                doc.setFillColor(255, 255, 255);
+                doc.rect(0, 0, doc.internal.pageSize.getWidth(), doc.internal.pageSize.getHeight(), 'F');
+
+                // 4. Configuración Inicial
                 const pageWidth = doc.internal.pageSize.getWidth();
-                const margin = 10;
+                const pageHeight = doc.internal.pageSize.getHeight();
+                const margin = 5;
                 let yPosition = margin;
-
-                // Logos (placeholders)
-                doc.setFillColor(224, 224, 224);
-                doc.rect(margin, yPosition, 30, 30, 'F'); // Logo izquierda
-                doc.rect(pageWidth - margin - 30, yPosition, 30, 30, 'F'); // Logo derecha
-
-                // Título
-                yPosition += 15;
-                doc.setFontSize(16);
-                doc.text('Reporte de Tableta', pageWidth / 2, yPosition, {
-                    align: 'center'
-                });
-                yPosition +=40
-
-                // Datos de la tableta
-                doc.setFontSize(11);
-                const lineHeight = 6;
-                const colWidth = (pageWidth - 3 * margin) / 2;
-
-                const dataLeft = [
-                    ['Activo:', data.tableta.activo],
-                    ['Marca:', data.tableta.marca],
-                    ['Modelo:', data.tableta.modelo],
-                    ['Inventario:', data.tableta.inventario || 'N/A'],
-                    ['Número de Serie:', data.tableta.numero_serie],
-                    ['Versión Android:', data.tableta.version_android || 'N/A'],
-                    ['Año de Adquisición:', data.tableta.anio_adquisicion || 'N/A']
-                ];
-
-                const dataRight = [
-                    ['Agencia:', data.tableta.agencia || 'N/A'],
-                    ['Proceso:', data.tableta.proceso || 'N/A'],
-                    ['RPE Trabajador:', data.tableta.rpe_trabajador],
-                    ['Ubicación Registro:', data.tableta.ubicacion_registro || 'N/A'],
-                    ['Fecha Registro:', data.tableta.fecha_registro || 'N/A'],
-                    ['Marca Chip:', data.tableta.marca_chip || 'N/A'],
-                    ['Número Serie Chip:', data.tableta.numero_serie_chip || 'N/A']
-                ];
-
-                // Imprimir datos
-                const printData = (dataArray, x, yStart) => {
-                    dataArray.forEach(([label, value], i) => {
-                        const y = yStart + i * lineHeight;
-                        doc.setFont('helvetica', 'bold');
-                        doc.text(label, x, y);
-                        const labelWidth = doc.getTextWidth(label) + 1;
-                        doc.setFont('helvetica', 'normal');
-                        doc.text(String(value), x + labelWidth, y);
-                    });
-                };
-
-                let yData = yPosition;
-                printData(dataLeft, margin, yData);
-                printData(dataRight, margin + colWidth + margin, yData);
-
-                // Fotos
-                yPosition = yData + 50;
-                doc.setFontSize(12);
-                doc.text('Fotos de la Tableta:', pageWidth / 2, yPosition, {
-                    align: 'center'
-                });
-                yPosition += 10;
-
-                const fotoSize = 55;
-                const espacioEntreFotos = 10;
-                const fotosPorFila = 2;
-                let xStart = (pageWidth - ((fotoSize * fotosPorFila) + espacioEntreFotos)) / 2;
-                let x = xStart;
-                let y = yPosition;
-
-                // Generar un timestamp para evitar caché
                 const cacheBuster = Date.now();
 
-                // Cargar fotos dinámicamente
-                let fotosCargadas = 0;
-                const totalFotos = data.fotos.length || 1;
-
-                function finalizarPDF() {
-                    let yPosition = y + (data.fotos.length ? fotoSize + 20 : 20);
-                    doc.setFontSize(12);
-                    const firmaLabel = 'Firma:';
-                    const firmaBoxWidth = 60;
-                    const firmaBoxHeight = 15;
-                    const firmaX = (pageWidth - firmaBoxWidth) / 2;
-                    doc.text(firmaLabel, pageWidth / 2, yPosition, {
-                        align: 'center'
-                    });
-                    yPosition += 5;
-                    doc.rect(firmaX, yPosition, firmaBoxWidth, firmaBoxHeight);
-
-                    if (isPreview) {
-                        const pdfBlob = doc.output('bloburl');
-                        window.open(pdfBlob, '_blank');
-                        showToast('Éxito', 'Reporte previsualizado correctamente', true);
-                    } else {
-                        doc.save(`reporte_tableta_${activo}.pdf`);
-                        showToast('Éxito', 'Reporte generado correctamente', true);
-                    }
-                }
-
-                if (data.fotos.length) {
-                    data.fotos.forEach((foto, index) => {
-                        console.log('Cargando foto:', foto); // Log para depuración
+                // 5. Función Auxiliar para Cargar Imágenes
+                function loadImage(src, usePNG = false) {
+                    return new Promise((resolve, reject) => {
                         const img = new Image();
                         img.crossOrigin = 'Anonymous';
-                        // Añadir cache buster a la URL
-                        img.src = '<?= BASE_URL ?>cfe-api/uploads/tabletas/' + foto + '?v=' + cacheBuster;
+                        img.src = src + '?v=' + cacheBuster;
                         img.onload = () => {
-                            console.log('Foto cargada correctamente:', foto);
                             const canvas = document.createElement('canvas');
                             canvas.width = img.width;
                             canvas.height = img.height;
                             const ctx = canvas.getContext('2d');
+                            if (usePNG) {
+                                ctx.fillStyle = '#FFFFFF';
+                                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                            }
                             ctx.drawImage(img, 0, 0);
-                            const imgData = canvas.toDataURL('image/jpeg');
-                            doc.addImage(imgData, 'JPEG', x, y, fotoSize, fotoSize);
-                            if ((index + 1) % fotosPorFila === 0) {
-                                y += fotoSize + espacioEntreFotos;
-                                x = xStart;
-                            } else {
-                                x += fotoSize + espacioEntreFotos;
-                            }
-                            fotosCargadas++;
-                            if (fotosCargadas === data.fotos.length) {
-                                finalizarPDF();
-                            }
+                            const format = usePNG ? 'image/png' : 'image/jpeg';
+                            resolve(canvas.toDataURL(format));
                         };
                         img.onerror = () => {
-                            console.error('Error al cargar foto:', foto);
-                            fotosCargadas++;
-                            if (fotosCargadas === data.fotos.length) {
-                                finalizarPDF();
-                            }
+                            console.error('Error al cargar imagen:', src);
+                            reject(new Error('No se pudo cargar la imagen: ' + src));
                         };
                     });
-                } else {
-                    console.log('No hay fotos para cargar');
-                    finalizarPDF();
                 }
+
+                // 6. URLs de Imágenes
+                const logoIzquierdaSrc = '<?= BASE_URL ?>assets/images/logo_izquierdo.png';
+                const logoDerechaSrc = '<?= BASE_URL ?>assets/images/logo_derecho.png';
+                const firmaSrc = '<?= BASE_URL ?>cfe-api/uploads/firmas/' + data.tableta.activo + '_' + data.tableta.rpe_trabajador + '.png';
+
+                // 7. Carga de Logos y Firma
+                Promise.all([
+                        loadImage(logoIzquierdaSrc, true),
+                        loadImage(logoDerechaSrc, true),
+                        loadImage(firmaSrc, true)
+                    ])
+                    .then(([logoIzquierdaData, logoDerechaData, firmaData]) => {
+                        // 8. Dibujar Logos
+                        doc.addImage(logoIzquierdaData, 'PNG', margin, 1, 50, 40);
+                        doc.addImage(logoDerechaData, 'PNG', pageWidth - margin - 30, yPosition, 30, 30);
+
+                        // 9. Título del Reporte
+                        yPosition += 15;
+                        doc.setFontSize(16);
+                        doc.text('Reporte de Tableta', pageWidth / 2, yPosition, {
+                            align: 'center'
+                        });
+
+                        // 10. Datos de la Tableta
+                        yPosition += 30;
+                        doc.setFontSize(11);
+                        const lineHeight = 6;
+                        const colWidth = (pageWidth - 3 * margin) / 2; // Mantiene el ancho de las columnas
+                        const columnSpacing = -20; // Espacio reducido entre columnas (ajusta este valor según necesites)
+
+                        const dataLeft = [
+                            ['Activo:', data.tableta.activo],
+                            ['Marca:', data.tableta.marca],
+                            ['Modelo:', data.tableta.modelo],
+                            ['Inventario:', data.tableta.inventario || 'N/A'],
+                            ['Número de Serie:', data.tableta.numero_serie],
+                            ['Versión Android:', data.tableta.version_android || 'N/A'],
+                            ['Año de Adquisición:', data.tableta.anio_adquisicion || 'N/A']
+                        ];
+
+                        const dataRight = [
+                            ['Agencia:', data.tableta.agencia || 'N/A'],
+                            ['Proceso:', data.tableta.proceso || 'N/A'],
+                            ['RPE Trabajador:', data.tableta.rpe_trabajador],
+                            ['Nombre Trabajador:', data.tableta.nombre_trabajador || 'N/A'],
+                            ['Ubicación Registro:', data.tableta.ubicacion_registro || 'N/A'],
+                            ['Fecha Registro:', data.tableta.fecha_registro || 'N/A'],
+                            ['Número Serie Chip:', data.tableta.numero_serie_chip || 'N/A']
+                        ];
+
+                        const printData = (dataArray, x, yStart) => {
+                            dataArray.forEach(([label, value], i) => {
+                                const y = yStart + i * lineHeight;
+                                doc.setFont('helvetica', 'bold');
+                                doc.text(label, x, y);
+                                const labelWidth = doc.getTextWidth(label) + 1;
+                                doc.setFont('helvetica', 'normal');
+                                doc.text(String(value), x + labelWidth, y);
+                            });
+                        };
+
+                        // Imprimir columnas
+                        let yData = yPosition;
+                        printData(dataLeft, margin, yData);
+                        printData(dataRight, margin + colWidth + columnSpacing, yData); // Usar columnSpacing en lugar de margin
+
+                        // 11. Sección de Fotos
+                        yPosition = yData + 50;
+                        doc.setFontSize(12);
+                        doc.text('Fotos de la Tableta:', pageWidth / 2, yPosition, {
+                            align: 'center'
+                        });
+                        yPosition += 10;
+
+                        const fotoSize = 55;
+                        const espacioEntreFotos = 10;
+                        const fotosPorFila = 2;
+                        let xStart = (pageWidth - ((fotoSize * fotosPorFila) + espacioEntreFotos * (fotosPorFila - 1))) / 2;
+                        let x = xStart;
+                        let y = yPosition;
+
+                        // 12. Función para Cargar Fotos Secuencialmente
+                        async function cargarFotosSecuencialmente() {
+                            if (!data.fotos || data.fotos.length === 0) {
+                                console.log('No hay fotos para cargar');
+                                finalizarPDF();
+                                return;
+                            }
+
+                            for (let index = 0; index < data.fotos.length; index++) {
+                                const foto = data.fotos[index];
+                                console.log('Cargando foto:', foto);
+                                try {
+                                    const imgData = await loadImage('<?= BASE_URL ?>cfe-api/uploads/tabletas/' + foto, false);
+                                    doc.addImage(imgData, 'JPEG', x, y, fotoSize, fotoSize);
+
+                                    // Actualizar coordenadas
+                                    if ((index + 1) % fotosPorFila === 0) {
+                                        y += fotoSize + espacioEntreFotos;
+                                        x = xStart;
+                                    } else {
+                                        x += fotoSize + espacioEntreFotos;
+                                    }
+                                } catch (error) {
+                                    console.error('Error al procesar foto:', foto, error);
+                                    if ((index + 1) % fotosPorFila === 0) {
+                                        y += fotoSize + espacioEntreFotos;
+                                        x = xStart;
+                                    } else {
+                                        x += fotoSize + espacioEntreFotos;
+                                    }
+                                }
+                            }
+                            finalizarPDF();
+                        }
+
+                        // 13. Función Finalizar PDF
+                        function finalizarPDF() {
+                            const firmaBoxWidth = 60;
+                            const firmaBoxHeight = 30;
+                            const firmaX = (pageWidth - firmaBoxWidth) / 2;
+                            const firmaY = pageHeight - margin - firmaBoxHeight - 5;
+
+                            doc.setFontSize(12);
+                            doc.text('Firma:', pageWidth / 2, firmaY, {
+                                align: 'center'
+                            });
+                            doc.addImage(firmaData, 'PNG', firmaX, firmaY + 5, firmaBoxWidth, firmaBoxHeight);
+
+                            if (isPreview) {
+                                const pdfBlob = doc.output('bloburl');
+                                window.open(pdfBlob, '_blank');
+                                showToast('Éxito', 'Reporte previsualizado correctamente', true);
+                            } else {
+                                doc.save(`reporte_tableta_${activo}.pdf`);
+                                showToast('Éxito', 'Reporte generado correctamente', true);
+                            }
+                        }
+
+                        // 14. Iniciar Carga de Fotos
+                        cargarFotosSecuencialmente();
+                    })
+                    .catch(error => {
+                        console.error('Error cargando assets (logos/firma):', error);
+                        showToast('Error', 'No se pudieron cargar los logos o la firma.', false);
+                    });
             })
             .catch(error => {
                 console.error('Error generando PDF:', error);
